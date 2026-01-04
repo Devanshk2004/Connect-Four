@@ -136,7 +136,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-950 text-white p-4 font-sans flex flex-col md:flex-row items-start justify-center">
-      <div className="flex flex-col items-center w-full max-w-3xl">
+      <div className="flex flex-col items-center w-full max-w-3xl self-center">
         <h1 className="text-4xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
           4 In A Row
         </h1>
@@ -209,6 +209,7 @@ export default function Home() {
               onColumnClick={handleColumnClick}
               isMyTurn={turn === username}
               winner={winner}
+              players={players}
             />
 
             {(winner || isDraw) && (

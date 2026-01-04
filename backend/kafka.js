@@ -1,10 +1,21 @@
 const { Kafka, Partitioners } = require('kafkajs');
 
-const kafka = new Kafka({
+const kafkaConfig = {
     clientId: 'connect-four-backend',
     brokers: [(process.env.KAFKA_BROKER || 'localhost:9092')],
-    logLevel: 0 // Reduce logging noise
-});
+    logLevel: 0
+};
+
+if (process.env.KAFKA_USERNAME && process.env.KAFKA_PASSWORD) {
+    kafkaConfig.ssl = true;
+    kafkaConfig.sasl = {
+        mechanism: 'plain',
+        username: process.env.KAFKA_USERNAME,
+        password: process.env.KAFKA_PASSWORD
+    };
+}
+
+const kafka = new Kafka(kafkaConfig);
 
 const producer = kafka.producer({ createPartitioner: Partitioners.LegacyPartitioner });
 
