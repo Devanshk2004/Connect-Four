@@ -1,33 +1,11 @@
 const mongoose = require('mongoose');
+const GameModel = require('../models/Game');
 
-const gameSchema = new mongoose.Schema({
-    gameId: { type: String, required: true, unique: true },
-    players: [{ type: String, required: true }],
-    winner: { type: String, default: null },
-    isDraw: { type: Boolean, default: false },
-    startTime: { type: Date, required: true },
-    endTime: { type: Date, default: Date.now },
-    movesCount: { type: Number, default: 0 }
-});
 
-const GameModel = mongoose.model('Game', gameSchema);
-
-const connectDB = async () => {
-    const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/connectfour';
-    try {
-        await mongoose.connect(mongoURI);
-        console.log('MongoDB connected');
-    } catch (err) {
-        console.error('MongoDB connection error:', err.message);
-        // We don't exit the process here to allow the game to run in-memory even if DB fails
-    }
-};
-
-// In-memory fallback
 const localGames = [];
 
 const saveGame = async (gameData) => {
-    // Always save to memory
+
     localGames.push(gameData);
 
     if (mongoose.connection.readyState === 1) {
@@ -56,7 +34,7 @@ const getLeaderboard = async () => {
         }
     }
 
-    // Fallback: Calculate from memory
+
     const counts = {};
     localGames.forEach(g => {
         if (g.winner) {
@@ -72,4 +50,4 @@ const getLeaderboard = async () => {
     return sorted;
 };
 
-module.exports = { connectDB, saveGame, getLeaderboard };
+module.exports = { saveGame, getLeaderboard };

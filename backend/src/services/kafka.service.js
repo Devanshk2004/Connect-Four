@@ -38,8 +38,6 @@ const emitGameEnd = async (gameData) => {
         });
         console.log('Game end event emitted to Kafka');
     } catch (err) {
-        // Suppress errors if Kafka is not running to avoid spamming logs in dev
-        // console.error('Error emitting Kafka event:', err.message);
     }
 };
 

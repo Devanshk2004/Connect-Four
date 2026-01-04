@@ -1,16 +1,16 @@
-const Game = require('./game');
-const Bot = require('./bot');
-const { saveGame, getLeaderboard } = require('./db');
-const { emitGameEnd } = require('./kafka');
+const Game = require('../lib/Game');
+const Bot = require('./Bot');
+const { saveGame, getLeaderboard } = require('./db.service');
+const { emitGameEnd } = require('./kafka.service');
 
 class GameManager {
     constructor(io) {
         this.io = io;
-        this.queue = []; // Array of { socket, username, timeoutId }
-        this.games = new Map(); // gameId -> Game instance
-        this.socketToGame = new Map(); // socketId -> gameId
-        this.userToGame = new Map(); // username -> { gameId, side }
-        this.disconnectTimers = new Map(); // username -> timeoutId
+        this.queue = [];
+        this.games = new Map();
+        this.socketToGame = new Map();
+        this.userToGame = new Map();
+        this.disconnectTimers = new Map();
 
         this.setupHandlers();
     }
@@ -28,14 +28,11 @@ class GameManager {
     }
 
     handleJoinQueue(socket, username) {
-        // Validation: Check if already in game
         if (this.userToGame.has(username)) {
-            // Logic handled in reconnect, but good to check
             socket.emit('error', { message: 'User already in a game. Try reconnecting.' });
             return;
         }
 
-        // Store username on socket for convenience
         socket.data.username = username;
 
         if (this.queue.find(p => p.username === username)) {
@@ -44,18 +41,15 @@ class GameManager {
         }
 
         if (this.queue.length > 0) {
-            // Match found
             const opponent = this.queue.shift();
-            clearTimeout(opponent.timeoutId); // Cancel bot timer for opponent
+            clearTimeout(opponent.timeoutId);
 
             if (opponent.socket.connected) {
                 this.startGame(opponent.socket, socket, opponent.username, username);
             } else {
-                // Opponent disconnected while in queue, put current user back
                 this.handleJoinQueue(socket, username);
             }
         } else {
-            // Add to queue with 10s bot timeout
             const timeoutId = setTimeout(() => {
                 this.startBotGame(socket, username);
             }, 10000);
@@ -69,13 +63,11 @@ class GameManager {
         const game = new Game(name1, name2);
         this.games.set(game.gameId, game);
 
-        // Map sockets and users
         this.socketToGame.set(socket1.id, game.gameId);
         this.socketToGame.set(socket2.id, game.gameId);
         this.userToGame.set(name1, { gameId: game.gameId, side: 'player1' });
         this.userToGame.set(name2, { gameId: game.gameId, side: 'player2' });
 
-        // Join room
         socket1.join(game.gameId);
         socket2.join(game.gameId);
 
@@ -90,7 +82,6 @@ class GameManager {
     }
 
     startBotGame(socket, username) {
-        // Remove from queue
         this.queue = this.queue.filter(p => p.username !== username);
 
         const botName = 'Bot_AI';
@@ -100,8 +91,6 @@ class GameManager {
 
         this.socketToGame.set(socket.id, game.gameId);
         this.userToGame.set(username, { gameId: game.gameId, side: 'player1' });
-
-        // We don't map bot user, just game state
 
         socket.join(game.gameId);
 
@@ -140,7 +129,7 @@ class GameManager {
         if (result.winner || result.isDraw) {
             this.endGame(game, result.winner, result.isDraw);
         } else if (game.isBotGame && game.getCurrentPlayer() === 'Bot_AI') {
-            // Bot Move
+
             setTimeout(() => {
                 const botMoveCol = Bot.findMove(game.board, 'Bot_AI', username);
                 const botResult = game.makeMove('Bot_AI', botMoveCol);
@@ -162,7 +151,6 @@ class GameManager {
     endGame(game, winner, isDraw) {
         this.io.to(game.gameId).emit('game_over', { winner, isDraw });
 
-        // Save to DB
         saveGame({
             gameId: game.gameId,
             players: game.players,
@@ -172,20 +160,16 @@ class GameManager {
             movesCount: game.moves.length
         });
 
-        // Emit Kafka Event
         emitGameEnd({
             gameId: game.gameId,
             winner: winner,
             players: game.players
         });
 
-        // Cleanup
         this.games.delete(game.gameId);
         game.players.forEach(p => {
             if (p !== 'Bot_AI') this.userToGame.delete(p);
         });
-
-        // We don't verify disconnects for finished games
     }
 
     handleDisconnect(socket) {
@@ -194,7 +178,6 @@ class GameManager {
 
         console.log(`User disconnected: ${username}`);
 
-        // 1. If in queue, remove
         const queueIdx = this.queue.findIndex(p => p.username === username);
         if (queueIdx !== -1) {
             clearTimeout(this.queue[queueIdx].timeoutId);
@@ -202,17 +185,16 @@ class GameManager {
             return;
         }
 
-        // 2. If in active game, set forfeit timer
         const gameInfo = this.userToGame.get(username);
         if (gameInfo) {
             const gameId = gameInfo.gameId;
             const game = this.games.get(gameId);
 
             if (game) {
-                // Notify opponent
+
                 this.io.to(gameId).emit('player_disconnected', { username });
 
-                // 30s Reconnect Timer
+
                 const timeoutId = setTimeout(() => {
                     this.handleForfeit(username, gameId);
                 }, 30000);
@@ -226,17 +208,17 @@ class GameManager {
         console.log(`Attempting reconnect: ${username}`);
         socket.data.username = username;
 
-        // Check for active disconnect timer
+
         if (this.disconnectTimers.has(username)) {
             clearTimeout(this.disconnectTimers.get(username));
             this.disconnectTimers.delete(username);
 
             const gameInfo = this.userToGame.get(username);
             if (gameInfo && this.games.has(gameInfo.gameId)) {
-                // Rejoin game
+
                 const game = this.games.get(gameInfo.gameId);
                 socket.join(gameInfo.gameId);
-                this.socketToGame.set(socket.id, gameInfo.gameId); // Update socket map
+                this.socketToGame.set(socket.id, gameInfo.gameId);
 
                 socket.emit('reconnect_success', {
                     gameId: game.gameId,
@@ -259,7 +241,7 @@ class GameManager {
 
         const winner = game.players.find(p => p !== username);
 
-        // End game as forfeit
+
         this.io.to(gameId).emit('game_over', {
             winner: winner,
             reason: 'Opponent forfeited by disconnection'

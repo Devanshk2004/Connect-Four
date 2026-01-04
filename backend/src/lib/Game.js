@@ -7,8 +7,8 @@ class Game {
     constructor(player1Id, player2Id) {
         this.gameId = uuidv4();
         this.players = [player1Id, player2Id];
-        this.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null)); // 6 rows, 7 cols
-        this.turnIndex = 0; // 0 for player1, 1 for player2
+        this.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+        this.turnIndex = 0;
         this.winner = null;
         this.isDraw = false;
         this.moves = [];
@@ -24,7 +24,7 @@ class Game {
         if (playerId !== this.players[this.turnIndex]) return { error: 'Not your turn' };
         if (colIndex < 0 || colIndex >= COLS) return { error: 'Invalid column' };
 
-        // Find the lowest empty row in the column
+
         let rowIndex = -1;
         for (let r = ROWS - 1; r >= 0; r--) {
             if (this.board[r][colIndex] === null) {
@@ -43,25 +43,24 @@ class Game {
         } else if (this.checkDraw()) {
             this.isDraw = true;
         } else {
-            this.turnIndex = 1 - this.turnIndex; // Switch turn
+            this.turnIndex = 1 - this.turnIndex;
         }
 
         return { success: true, row: rowIndex, col: colIndex, winner: this.winner, isDraw: this.isDraw };
     }
 
     checkWin(row, col, playerId) {
-        // Directions: [rowDelta, colDelta]
         const directions = [
-            [0, 1],  // Horizontal
-            [1, 0],  // Vertical
-            [1, 1],  // Diagonal /
-            [1, -1]  // Diagonal \
+            [0, 1],
+            [1, 0],
+            [1, 1],
+            [1, -1]
         ];
 
         for (const [dr, dc] of directions) {
             let count = 1;
 
-            // Check positive direction
+
             for (let i = 1; i < 4; i++) {
                 const r = row + dr * i;
                 const c = col + dc * i;
@@ -72,7 +71,7 @@ class Game {
                 }
             }
 
-            // Check negative direction
+
             for (let i = 1; i < 4; i++) {
                 const r = row - dr * i;
                 const c = col - dc * i;
