@@ -6,8 +6,6 @@ const ROWS = 6;
 const COLS = 7;
 
 export default function Board({ board, onColumnClick, isMyTurn, winner, players }) {
-    // board is 6x7 array
-    // We'll render it as a grid
 
     return (
         <div className="flex flex-col items-center">
@@ -33,8 +31,6 @@ export default function Board({ board, onColumnClick, isMyTurn, winner, players 
                     </div>
                 ))}
             </div>
-
-            {/* Column indicators for easier mobile play could go here */}
         </div>
     );
 }

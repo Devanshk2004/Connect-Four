@@ -7,7 +7,6 @@ export default function Leaderboard() {
     const [leaders, setLeaders] = useState([]);
 
     useEffect(() => {
-        // Request initial
         socket.emit('get_leaderboard');
 
         const handleUpdate = (data) => {

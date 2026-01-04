@@ -1,7 +1,7 @@
 const Game = require('../lib/Game');
 const Bot = require('./Bot');
 const { saveGame, getLeaderboard } = require('./db.service');
-const { emitGameEnd } = require('./kafka.service');
+
 
 class GameManager {
     constructor(io) {
@@ -160,11 +160,7 @@ class GameManager {
             movesCount: game.moves.length
         });
 
-        emitGameEnd({
-            gameId: game.gameId,
-            winner: winner,
-            players: game.players
-        });
+
 
         this.games.delete(game.gameId);
         game.players.forEach(p => {
